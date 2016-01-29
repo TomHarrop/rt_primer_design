@@ -7,17 +7,11 @@
 # Imports
 
 import os
-import sys
 import argparse
-from primerDesignFunctions import primerBlastResults, runBlast
+from primerDesignFunctions import runBlast
 from subprocess import call
 import csv
 import urllib
-
-# directories, this is ugly
-pyDir = os.path.dirname(os.path.abspath(__file__))
-print(pyDir)
-rDir = pyDir.replace("py", "R")
 
 # command-line options
 parser = argparse.ArgumentParser(
@@ -121,8 +115,7 @@ parameters = {
 # CODE #
 ########
 
-# call R script from same folder as python script on second CL argument
-# (which should be primers.txt)
+# call R script to get refseq ids
 call(['bin/getRefSeqIDs.R', primersList, outdir])
 
 print(('\nRefSeq IDs for genes in excludedRecords.csv may be manually added'
@@ -145,9 +138,12 @@ ResultsPages = runBlast(MsuRefSeq, parameters=parameters)
 # primers that worked first time
 strictPrimers = {}
 for key in ResultsPages:
-    if not ResultsPages[key].exceptions and not ResultsPages[key].offTargets and not ResultsPages[key].noPrimersFound:
-            ResultsPages[key].finalStatus = 'OK'
-            strictPrimers[key] = ResultsPages[key]
+    if (not ResultsPages[key].exceptions and
+            not ResultsPages[key].offTargets and
+            not ResultsPages[key].noPrimersFound):
+        ResultsPages[key].finalStatus = 'OK'
+        strictPrimers[key] = ResultsPages[key]
+
 for key in strictPrimers:
     ResultsPages.pop(key)
 
@@ -164,121 +160,160 @@ for key in ResultsPages:
 for key in intronlessReruns:
     ResultsPages.pop(key)
 if len(intronlessReruns) > 0:
-    print('Removed ' + str(len(intronlessReruns)) + ' genes without introns.\n')
+    print('Removed ' + str(len(intronlessReruns)) +
+          ' genes without introns.\n')
 
-#==============================================================================
+# =============================================================================
 # # For now rerunning the intronless genes is not possible because the BLAST
 # # server is ignoring the SPAN_INTRON input. Later, output URLs for the
 # # intronless genes to allow easy manual designing.
-# 
+#
 # intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
 # intronlessStrict = {}
 # for key in intronlessPrimers:
-#     if not intronlessPrimers[key].exceptions and not intronlessPrimers[key].offTargets and not intronlessPrimers[key].noPrimersFound:
+#    if (not relaxedPrimers[key].exceptions and
+#            not relaxedPrimers[key].offTargets and
+#            not relaxedPrimers[key].noPrimersFound):
 #         intronlessPrimers[key].finalStatus = 'INTRONLESS_strict'
 #         intronlessStrict[key] = intronlessPrimers[key]
 # for key in intronlessStrict:
 #     intronlessReruns.pop(key)
-# 
+#
 # intronlessParams['GC_CLAMP'] = '1'
 # intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
 # intronlessGC1 = {}
 # for key in intronlessPrimers:
-#     if not intronlessPrimers[key].exceptions and not intronlessPrimers[key].offTargets and not intronlessPrimers[key].noPrimersFound:
+#    if (not relaxedPrimers[key].exceptions and
+#            not relaxedPrimers[key].offTargets and
+#            not relaxedPrimers[key].noPrimersFound):
 #         intronlessPrimers[key].finalStatus = 'INTRONLESS_GC1'
 #         intronlessGC1[key] = intronlessPrimers[key]
 # for key in intronlessGC1:
 #     intronlessReruns.pop(key)
-#     
+#
 # intronlessParams['PRIMER_MIN_GC'] = '40'
 # intronlessParams['PRIMER_MAX_GC'] = '60'
 # intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
 # intronlessGCDev = {}
 # for key in intronlessPrimers:
-#     if not intronlessPrimers[key].exceptions and not intronlessPrimers[key].offTargets and not intronlessPrimers[key].noPrimersFound:
+#    if (not relaxedPrimers[key].exceptions and
+#            not relaxedPrimers[key].offTargets and
+#            not relaxedPrimers[key].noPrimersFound):
 #         intronlessPrimers[key].finalStatus = 'INTRONLESS_GCDev'
 #         intronlessGCDev[key] = intronlessPrimers[key]
 # for key in intronlessGCDev:
 #     intronlessReruns.pop(key)
-#     
+#
 # intronlessParams['PRIMER_MIN_TM'] = '52'
 # intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
 # intronlessLowTM = {}
 # for key in intronlessPrimers:
-#     if not intronlessPrimers[key].exceptions and not intronlessPrimers[key].offTargets and not intronlessPrimers[key].noPrimersFound:
+#    if (not relaxedPrimers[key].exceptions and
+#            not relaxedPrimers[key].offTargets and
+#            not relaxedPrimers[key].noPrimersFound):
 #         intronlessPrimers[key].finalStatus = 'INTRONLESS_GCDev'
 #         intronlessLowTM[key] = intronlessPrimers[key]
 # for key in intronlessLowTM:
 #     intronlessReruns.pop(key)
-#     
+#
 # intronlessParams['SELF_ANY'] = '5'
 # intronlessParams['SELF_END'] = '2'
 # intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
 # intronlessDimers = {}
 # for key in intronlessPrimers:
-#     if not intronlessPrimers[key].exceptions and not intronlessPrimers[key].offTargets and not intronlessPrimers[key].noPrimersFound:
+#    if (not relaxedPrimers[key].exceptions and
+#            not relaxedPrimers[key].offTargets and
+#            not relaxedPrimers[key].noPrimersFound):
 #         intronlessPrimers[key].finalStatus = 'INTRONLESS_GCDev'
 #         intronlessDimers[key] = intronlessPrimers[key]
 # for key in intronlessDimers:
 #     intronlessReruns.pop(key)
-#==============================================================================
+# =============================================================================
 
 # b. relax perameters and re-iterate
 relaxedParams = parameters.copy()
 relaxedReruns = {}
 for key in ResultsPages:
     relaxedReruns[key] = ResultsPages[key].RefSeq
-    
+
 # i. GC_CLAMP
-if len(ResultsPages) > 0 and len(strictPrimers) > 0:
-    print('Found ' + str(len(strictPrimers)) + ' good primer pairs.\n')
+print('Found ' + str(len(strictPrimers)) + ' strict primer pairs.\n')
 print('Trying again with relaxed parameters: GC Clamp\n')
+
 relaxedParams['GC_CLAMP'] = '1'
-relaxedPrimers = runBlast(relaxedReruns, relaxedParams)
+if relaxedReruns:
+    relaxedPrimers = runBlast(relaxedReruns, relaxedParams)
+else:
+    relaxedPrimers = {}
+
 relaxedGC1 = {}
 for key in relaxedPrimers:
-    if not relaxedPrimers[key].exceptions and not relaxedPrimers[key].offTargets and not relaxedPrimers[key].noPrimersFound:
-        relaxedPrimers[key].finalStatus = 'GC1'        
+    if (not relaxedPrimers[key].exceptions and
+            not relaxedPrimers[key].offTargets and
+            not relaxedPrimers[key].noPrimersFound):
+        relaxedPrimers[key].finalStatus = 'GC1'
         relaxedGC1[key] = relaxedPrimers[key]
 for key in relaxedGC1:
     relaxedReruns.pop(key)
     ResultsPages.pop(key)
 relaxedParams['GC_CLAMP'] = '0'
-relaxedPrimers = runBlast(relaxedReruns, relaxedParams)
+if relaxedReruns:
+    relaxedPrimers = runBlast(relaxedReruns, relaxedParams)
+else:
+    relaxedPrimers = {}
+
 relaxedGC0 = {}
 for key in relaxedPrimers:
-    if not relaxedPrimers[key].exceptions and not relaxedPrimers[key].offTargets and not relaxedPrimers[key].noPrimersFound:
-        relaxedPrimers[key].finalStatus = 'GC0'        
+    if (not relaxedPrimers[key].exceptions and
+            not relaxedPrimers[key].offTargets and
+            not relaxedPrimers[key].noPrimersFound):
+        relaxedPrimers[key].finalStatus = 'GC0'
         relaxedGC0[key] = relaxedPrimers[key]
 for key in relaxedGC0:
     relaxedReruns.pop(key)
     ResultsPages.pop(key)
 
 # ii. Primer GC content
-if len(ResultsPages) > 0 and len(relaxedGC1) + len(relaxedGC0) > 0:
-    print('Found another ' + str(len(relaxedGC1) + len(relaxedGC0)) + '  primer pairs.\n')
-print('Trying again with relaxed parameters: GC Content\n')
+if len(relaxedGC1) + len(relaxedGC0) > 0:
+    print('Found another ' + str(len(relaxedGC1) + len(relaxedGC0)) +
+          '  primer pairs.\n')
+
 relaxedParams['PRIMER_MIN_GC'] = '35'
 relaxedParams['PRIMER_MAX_GC'] = '65'
-relaxedPrimers = runBlast(relaxedReruns, relaxedParams)
+if relaxedReruns:
+    print('Trying again with relaxed parameters: GC Content\n')
+    relaxedPrimers = runBlast(relaxedReruns, relaxedParams)
+else:
+    relaxedPrimers = {}
+
 relaxedGCCont = {}
 for key in relaxedPrimers:
-    if not relaxedPrimers[key].exceptions and not relaxedPrimers[key].offTargets and not relaxedPrimers[key].noPrimersFound:
+    if (not relaxedPrimers[key].exceptions and
+            not relaxedPrimers[key].offTargets and
+            not relaxedPrimers[key].noPrimersFound):
         relaxedPrimers[key].finalStatus = 'GC_Content'
         relaxedGCCont[key] = relaxedPrimers[key]
+
 for key in relaxedGCCont:
     relaxedReruns.pop(key)
     ResultsPages.pop(key)
 
 # iii. Primer TM
-if len(ResultsPages) > 0 and len(relaxedGCCont) > 0:
+if relaxedGCCont:
     print('Found another ' + str(len(relaxedGCCont)) + '  primer pairs.\n')
-print('Trying again with relaxed parameters: Primer TM\n')
+
 relaxedParams['PRIMER_MIN_TM'] = '52'
-relaxedPrimers = runBlast(relaxedReruns, relaxedParams)
+if relaxedReruns:
+    print('Trying again with relaxed parameters: Primer TM\n')
+    relaxedPrimers = runBlast(relaxedReruns, relaxedParams)
+else:
+    relaxedPrimers = {}
+
 relaxedTM = {}
 for key in relaxedPrimers:
-    if not relaxedPrimers[key].exceptions and not relaxedPrimers[key].offTargets and not relaxedPrimers[key].noPrimersFound:
+    if (not relaxedPrimers[key].exceptions and
+            not relaxedPrimers[key].offTargets and
+            not relaxedPrimers[key].noPrimersFound):
         relaxedPrimers[key].finalStatus = 'Low_TM'
         relaxedTM[key] = relaxedPrimers[key]
 for key in relaxedTM:
@@ -286,15 +321,22 @@ for key in relaxedTM:
     ResultsPages.pop(key)
 
 # iv. Primer complementarity
-if len(ResultsPages) > 0 and len(relaxedTM) > 0:
+if relaxedTM:
     print('Found another ' + str(len(relaxedTM)) + '  primer pairs.\n')
-print('Trying again with relaxed parameters: Self complementarity\n')
+
 relaxedParams['SELF_ANY'] = '5'
 relaxedParams['SELF_END'] = '2'
-relaxedPrimers = runBlast(relaxedReruns, relaxedParams)
+if relaxedReruns:
+    print('Trying again with relaxed parameters: Self complementarity\n')
+    relaxedPrimers = runBlast(relaxedReruns, relaxedParams)
+else:
+    relaxedPrimers = {}
+
 relaxedDimers = {}
 for key in relaxedPrimers:
-    if not relaxedPrimers[key].exceptions and not relaxedPrimers[key].offTargets and not relaxedPrimers[key].noPrimersFound:
+    if (not relaxedPrimers[key].exceptions and
+            not relaxedPrimers[key].offTargets and
+            not relaxedPrimers[key].noPrimersFound):
         relaxedPrimers[key].finalStatus = 'Potential_Dimers'
         relaxedDimers[key] = relaxedPrimers[key]
 for key in relaxedDimers:
@@ -302,35 +344,45 @@ for key in relaxedDimers:
     ResultsPages.pop(key)
 
 # v. Near-defaults (use with caution)
-if len(ResultsPages) > 0 and len(relaxedDimers) > 0:
+if relaxedDimers:
     print('Found another ' + str(len(relaxedDimers)) + '  primer pairs.\n')
-print('Trying again with DEFAULT parameters: Self complementarity\nn.b. These primers may not work well.\n')
+
 relaxedParams['SELF_ANY'] = '8'
 relaxedParams['SELF_END'] = '3'
-relaxedPrimers = runBlast(relaxedReruns, relaxedParams)
+if relaxedReruns:
+    print('Trying again with DEFAULT parameters: Self complementarity\n'
+          'n.b. These primers may not work well.\n')
+    relaxedPrimers = runBlast(relaxedReruns, relaxedParams)
+else:
+    relaxedPrimers = {}
+
 relaxedBad = {}
 for key in relaxedPrimers:
-    if not relaxedPrimers[key].exceptions and not relaxedPrimers[key].offTargets and not relaxedPrimers[key].noPrimersFound:
+    if (not relaxedPrimers[key].exceptions and
+            not relaxedPrimers[key].offTargets and
+            not relaxedPrimers[key].noPrimersFound):
         relaxedPrimers[key].finalStatus = 'Probable_Dimers'
         relaxedBad[key] = relaxedPrimers[key]
 for key in relaxedBad:
     relaxedReruns.pop(key)
     ResultsPages.pop(key)
 
-#==============================================================================
+# =============================================================================
 # # vi. Without repeat filtering (doesn't work)
 # relaxedParams['LOW_COMPLEXITY_FILTER'] = 'off'
 # relaxedPrimers = runBlast(relaxedReruns, relaxedParams)
 # relaxedNoFilter = {}
 # for key in relaxedPrimers:
-#     if not relaxedPrimers[key].exceptions and not relaxedPrimers[key].offTargets and not relaxedPrimers[key].noPrimersFound:
+#    if (not relaxedPrimers[key].exceptions and
+#            not relaxedPrimers[key].offTargets and
+#            not relaxedPrimers[key].noPrimersFound):
 #         relaxedPrimers[key].finalStatus = 'No_repeat_filter'
 #         relaxedNoFilter[key] = relaxedPrimers[key]
 # for key in relaxedNoFilter:
 #     relaxedReruns.pop(key)
 #     ResultsPages.pop(key)
-#==============================================================================
-    
+# =============================================================================
+
 for key in ResultsPages:
     if ResultsPages[key].exceptions:
         ResultsPages[key].finalStatus = 'unknown_error'
@@ -338,9 +390,11 @@ for key in ResultsPages:
         ResultsPages[key].finalStatus = 'no_specific_primers'
     if ResultsPages[key].noPrimersFound:
         ResultsPages[key].finalStatus = 'primer_quality_too_low'
-        
-primerSets = [strictPrimers,relaxedGC1, relaxedGC0, relaxedBad, relaxedGCCont, relaxedDimers]
-primerStrings = ['strictPrimers','relaxedGC1', 'relaxedGC0', 'relaxedBad', 'relaxedGCCont', 'relaxedDimers']
+
+primerSets = [strictPrimers, relaxedGC1, relaxedGC0, relaxedBad, relaxedGCCont,
+              relaxedDimers]
+primerStrings = ['strictPrimers', 'relaxedGC1', 'relaxedGC0', 'relaxedBad',
+                 'relaxedGCCont', 'relaxedDimers']
 failedSets = [ResultsPages, intronlessPrimers]
 failedStrings = ['noPrimersFound', 'noIntronsFound']
 
@@ -350,48 +404,59 @@ for primerSet in primerSets:
 
 print('\nFound ' + str(primerNo) + ' primer pair(s).\nWriting reports...')
 
-file = open('primerSummary.csv', 'w')
-file.write('MSU.ID,RefSeqID,Status,PrimerF,PrimerF.TM,PrimerR,PrimerR.TM,ProductSize,IntronSize\n')
-for primerSet in primerSets:
-    #print(primerSet)    
-    for key in primerSet:
-        #print(key)
-        primerSet[key].parsePrimers()
-        primerSet[key].replaceCssLinks()
-        file.write(primerSet[key].csvLine() + '\n')
-for primerSet in failedSets:
-    for key in primerSet:
-        file.write('{0},{1},{2},\n'.format(primerSet[key].LOC, primerSet[key].RefSeq, primerSet[key].finalStatus))
-file.close()
+with open(outdir + '/primerSummary.csv', 'w') as file:
+    file.write('MSU.ID,RefSeqID,Status,PrimerF,PrimerF.TM,PrimerR,PrimerR.TM,'
+               'ProductSize,IntronSize\n')
+    for primerSet in primerSets:
+        for key in primerSet:
+            primerSet[key].parsePrimers()
+            primerSet[key].replaceCssLinks()
+            file.write(primerSet[key].csvLine() + '\n')
+    for primerSet in failedSets:
+        for key in primerSet:
+            file.write('{0},{1},{2},\n'.format(primerSet[key].LOC,
+                       primerSet[key].RefSeq, primerSet[key].finalStatus))
+
 
 # 5. print files to sub-folders of working directory
 for i in range(len(primerStrings)):
-    if len(primerSets[i]) > 0:
-        os.mkdir(path = primerStrings[i])
-        os.chdir(primerStrings[i])
+    if primerSets[i]:
+        subdir = outdir + "/" + primerStrings[i]
+        if not os.path.isdir(subdir):
+            os.mkdir(path=subdir)
         for key in primerSets[i]:
-            primerSets[i][key].printFile()
-        os.chdir(working)
-    
+            primerSets[i][key].printFile(subdir=subdir)
+
 # 6. print URLs for manual chase-up into subfolder of working directory
 # need to work out how to format the URL without posting it.
 intronlessParams = parameters.copy()
 intronlessParams['SPAN_INTRON'] = 'off'
 for i in range(len(failedStrings)):
-    if len(failedSets[i]) > 0:
-        os.mkdir(path = 'FAILED'+failedStrings[i])
-        os.chdir('FAILED'+failedStrings[i])
-        file = open('links.html', 'w')
-        file.write('''<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN"\n    "http://www.w3.org/TR/html4/strict.dtd">\n<html lang="en">\n  <head>\n    <meta http-equiv="content-type" content="text/html; charset=utf-8">\n    <title>Links for primer design</title>\n    <link rel="stylesheet" type="text/css" href="style.css">\n    <script type="text/javascript" src="script.js"></script>\n  </head>\n  <body>\n<p>\n''')
-        for key in failedSets[i]:
-            pasteParams = intronlessParams.copy()
-            pasteParams['INPUT_SEQUENCE'] = failedSets[i][key].RefSeq
-            file.write('''<a href="http://www.ncbi.nlm.nih.gov/tools/primer-blast/index.cgi?'''+urllib.parse.urlencode(pasteParams)+'''">''' + failedSets[i][key].LOC + '''</a><br />\n''')
-        file.write('\n</p>\n</body>\n</html>')
-        file.close()
-        os.chdir(working)
+    if failedSets[i]:
+        subdir = outdir + "/FAILED" + failedStrings[i]
+        if not os.path.isdir(subdir):
+            os.mkdir(path=subdir)
 
-# re-integrate CSGNL symbols and tidy output in R.
-call([sys.path[0]+'/combineResults.R'])
+        with open(subdir + '/links.html', 'w') as file:
+            file.write('''<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN"'''
+                       '''\n    "http://www.w3.org/TR/html4/strict.dtd">\n'''
+                       '''<html lang="en">\n  '''
+                       '''<head>\n    '''
+                       '''<meta http-equiv="content-type"'''
+                       ''' content="text/html; charset=utf-8">\n'''
+                       '''    <title>Links for primer design</title>\n'''
+                       '''    <link rel="stylesheet" type="text/css"''
+                       '''' href="style.css">\n    '''
+                       '''<script type="text/javascript" src="script.js">'''
+                       '''</script>\n  </head>\n  <body>\n<p>\n''')
+            for key in failedSets[i]:
+                pasteParams = intronlessParams.copy()
+                pasteParams['INPUT_SEQUENCE'] = failedSets[i][key].RefSeq
+                file.write(
+                    '''<a href="http://www.ncbi.nlm.nih.gov/tools/'''
+                    '''primer-blast/index.cgi?''' +
+                    urllib.parse.urlencode(pasteParams) + '''">''' +
+                    failedSets[i][key].LOC + '''</a><br />\n''')
+            file.write('\n</p>\n</body>\n</html>')
 
 print('\nDone.\n')

@@ -59,15 +59,14 @@ class primerBlastResults:
         '''
         return self.html
 
-    def printFile(self):
+    def printFile(self, subdir):
         '''(primerBlastResults) -> NoneType
 
         Output html to file named LOC.html
 
         '''
-        file = open(self.LOC+'.html', 'w')
-        print(self.html, file=file)
-        file.close()
+        with open(subdir + "/" + self.LOC + ".html", 'w') as file:
+            print(self.html, file=file)
 
     def pollResults(self):
         '''(primerBlastResults) -> NoneType
@@ -256,6 +255,8 @@ def runBlast(MsuRefSeq, parameters,
     while statuses >= 1:
         print('Waiting 60 seconds for jobs to complete')
         timer = ProgressBar(widgets=[Timer()], maxval=60).start()
+        # for testing
+        # for i in range(10):
         for i in range(60):
             time.sleep(1)
             timer.update(i)
