@@ -1,4 +1,4 @@
-#!/usr/bin/Rscript
+#!/usr/bin/env Rscript
 
 RAP.MSU.refseq <- read.csv(file = "RAP.MSU.refseq.csv")
 primerSummary <- read.csv(file = 'primerSummary.csv')

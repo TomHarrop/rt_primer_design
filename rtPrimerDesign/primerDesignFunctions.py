@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import requests
@@ -135,17 +136,17 @@ class primerBlastResults:
         self.TM_R, self.ProductSize and self.IntronSize
 
         '''
-        pF = re.compile('Forward primer\s*\d*\s*([ACTG]*)')
-        pR = re.compile('Reverse primer\s*\d*\s*([ACTG]*)')
-        pProductSize = re.compile('product length = (\d*)')
+        pF = re.compile('Forward primer\s*\d*\s*([ACTG]+)')
+        pR = re.compile('Reverse primer\s*\d*\s*([ACTG]+)')
+        pProductSize = re.compile('Product length(\d*)')
         pIntronSize = re.compile('Total intron size(\d*)')
         pTMF = re.compile('Forward primer.*?(\d\d\\.\d\d)')
         pTMR = re.compile('Reverse primer.*?(\d\d\\.\d\d)')
-        primerText = self.html.find(class_='prPairDtl').text
+        # primerText = self.html.find(class_='prPairDtl').text
         primerTable = self.html.find(class_='prPairInfo').table.text
-        self.F = pF.search(primerText).group(1)
-        self.R = pR.search(primerText).group(1)
-        self.ProductSize = pProductSize.search(primerText).group(1)
+        self.F = pF.search(primerTable).group(1)
+        self.R = pR.search(primerTable).group(1)
+        self.ProductSize = pProductSize.search(primerTable).group(1)
         self.IntronSize = pIntronSize.search(primerTable).group(1)
         self.TM_F = pTMF.search(primerTable).group(1)
         self.TM_R = pTMR.search(primerTable).group(1)

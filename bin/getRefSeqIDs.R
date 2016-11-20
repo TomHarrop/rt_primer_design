@@ -1,4 +1,4 @@
-#!/usr/bin/Rscript
+#!/usr/bin/env Rscript
 
 PrintDate <- function(){
   format(Sys.time(), "[%a %b %d %H:%M:%S %Y] ")
