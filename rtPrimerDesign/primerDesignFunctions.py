@@ -43,6 +43,7 @@ class primerBlastResults:
                                           params={'job_key': self.job_key})
         self.url = statusPageResponse.url
         self.html = BeautifulSoup(statusPageResponse.content, 'lxml')
+        self.exceptions = None
 
     def __eq__(self, other):
         '''(primerBlastResults, primerBlastResults) -> bool
@@ -101,6 +102,9 @@ class primerBlastResults:
         '''
         if self.html.find(class_='error'):
             self.exceptions = 'Exception' in self.html.find(class_='error').text
+        elif self.html.find(class_='info'):
+            if 'junction cannot be found' in self.html.find(class_='info').text:
+                self.exceptions = 'Exception'
         else:
             self.exceptions = False
 
@@ -125,7 +129,11 @@ class primerBlastResults:
 
         '''
         if self.html.find(class_='warning'):
-            self.noPrimersFound = 'loosen the selection criteria' in self.html.find(class_='warning').text
+            self.noPrimersFound = ('loosen the selection criteria' in
+                                   self.html.find(class_='warning').text)
+        elif self.html.find(class_='info'):
+            self.noPrimersFound = ('No primers were found' in
+                                   self.html.find(class_='info').text)
         else:
             self.noPrimersFound = False
 
@@ -207,8 +215,17 @@ def runBlast(MsuRefSeq, parameters,
 
         '''
         soup = BeautifulSoup(Response.content, 'xml')
+        # first choice is the proper "job_key" tag
         if soup.find(NAME='job_key'):
             return(soup.find(NAME='job_key')['VALUE'])
+        # otherwise, try to parse the 'Job id' from `breadcrumb`
+        elif soup.find(id='breadcrumb'):
+            bc_strings = [
+                x for x in soup.find(id='breadcrumb').stripped_strings]
+            bc_search = re.compile(r'Job id\=(\S+)$')
+            for bc_string in bc_strings:
+                if bc_search.search(bc_string):
+                    return(bc_search.search(bc_string).groups()[0])
 
     # Code for runBlast starts here
 

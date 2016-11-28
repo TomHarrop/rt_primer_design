@@ -10,6 +10,7 @@
 import os
 import argparse
 from primerDesignFunctions import runBlast
+# from rtPrimerDesign.primerDesignFunctions import runBlast
 import subprocess
 import csv
 import urllib
@@ -38,10 +39,11 @@ parameters = {
     'PRIMER_OPT_TM': '60.0',
     'PRIMER_MAX_TM': '65.0',
     'PRIMER_MAX_DIFF_TM': '5',
-    'MIN_INTRON_SIZE': '50',
+    'MIN_INTRON_SIZE': '0',
     'MAX_INTRON_SIZE': '1000000',
     'PRIMER_SPECIFICITY_DATABASE': 'refseq_rna',
     'EXCLUDE_ENV': 'on',
+    'EXCLUDE_XM': 'on',
     'ORGANISM': 'Oryza sativa Japonica Group (taxid:39947)',
     'TOTAL_MISMATCH_IGNORE': '7',
     'ALLOW_TRANSCRIPT_VARIANTS': 'on',
@@ -60,7 +62,6 @@ parameters = {
     'SPAN_INTRON': 'on'
 }
 
-#    'EXCLUDE_XM': 'on'
 
 ########
 # CODE #
@@ -83,7 +84,6 @@ for row in RapMsuRefSeq:
     MsuRefSeq[row[0]] = row[1]
 
 # 3. initial call to runBlast function
-
 ResultsPages = runBlast(MsuRefSeq, parameters=parameters)
 
 # primers that worked first time
@@ -103,6 +103,7 @@ for key in strictPrimers:
 # a. first, remove genes without introns
 intronlessReruns = {}
 intronlessPrimers = {}
+
 for key in ResultsPages:
     if ResultsPages[key].exceptions:
         intronlessReruns[key] = ResultsPages[key].RefSeq
@@ -116,93 +117,98 @@ if len(intronlessReruns) > 0:
     print('Removed ' + str(len(intronlessReruns)) +
           ' genes without introns.\n')
 
-# look for genes without primer-spanning requirement by removing SPAN_INTRON
-# paramater
+# look for genes without primer-spanning requirement by removing
+# SPAN_INTRON paramater
 intronlessParams = parameters.copy()
 intronlessParams.pop('SPAN_INTRON')
-
-intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
 intronlessStrict = {}
-for key in intronlessPrimers:
-    if (not intronlessPrimers[key].exceptions and
-       not intronlessPrimers[key].offTargets and
-       not intronlessPrimers[key].noPrimersFound):
-        intronlessPrimers[key].finalStatus = 'INTRONLESS_strict'
-        intronlessStrict[key] = intronlessPrimers[key]
 
-for key in intronlessStrict:
-    intronlessReruns.pop(key)
+if len(intronlessReruns) > 0:
+    intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
+    for key in intronlessPrimers:
+        if (not intronlessPrimers[key].exceptions and
+           not intronlessPrimers[key].offTargets and
+           not intronlessPrimers[key].noPrimersFound):
+            intronlessPrimers[key].finalStatus = 'INTRONLESS_strict'
+            intronlessStrict[key] = intronlessPrimers[key]
+    for key in intronlessStrict:
+        intronlessReruns.pop(key)
 
 # GC Clamp
 intronlessParams['GC_CLAMP'] = '1'
-intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
 intronlessGC1 = {}
-for key in intronlessPrimers:
-    if (not intronlessPrimers[key].exceptions and not
-       intronlessPrimers[key].offTargets and not
-       intronlessPrimers[key].noPrimersFound):
-        intronlessPrimers[key].finalStatus = 'INTRONLESS_GC1'
-        intronlessGC1[key] = intronlessPrimers[key]
 
-for key in intronlessGC1:
-    intronlessReruns.pop(key)
+if len(intronlessReruns) > 0:
+    intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
+    for key in intronlessPrimers:
+        if (not intronlessPrimers[key].exceptions and not
+           intronlessPrimers[key].offTargets and not
+           intronlessPrimers[key].noPrimersFound):
+            intronlessPrimers[key].finalStatus = 'INTRONLESS_GC1'
+            intronlessGC1[key] = intronlessPrimers[key]
+    for key in intronlessGC1:
+        intronlessReruns.pop(key)
 
 intronlessParams['GC_CLAMP'] = '0'
-intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
 intronlessGC0 = {}
-for key in intronlessPrimers:
-    if (not intronlessPrimers[key].exceptions and not
-       intronlessPrimers[key].offTargets and not
-       intronlessPrimers[key].noPrimersFound):
-        intronlessPrimers[key].finalStatus = 'INTRONLESS_GC0'
-        intronlessGC1[key] = intronlessPrimers[key]
 
-for key in intronlessGC0:
-    intronlessReruns.pop(key)
+if len(intronlessReruns) > 0:
+    intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
+    for key in intronlessPrimers:
+        if (not intronlessPrimers[key].exceptions and not
+           intronlessPrimers[key].offTargets and not
+           intronlessPrimers[key].noPrimersFound):
+            intronlessPrimers[key].finalStatus = 'INTRONLESS_GC0'
+            intronlessGC1[key] = intronlessPrimers[key]
+    for key in intronlessGC0:
+        intronlessReruns.pop(key)
 
 # GC content
 intronlessParams['PRIMER_MIN_GC'] = '40'
 intronlessParams['PRIMER_MAX_GC'] = '60'
-intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
 intronlessGCDev = {}
-for key in intronlessPrimers:
-    if (not intronlessPrimers[key].exceptions and
-       not intronlessPrimers[key].offTargets and
-       not intronlessPrimers[key].noPrimersFound):
-        intronlessPrimers[key].finalStatus = 'INTRONLESS_GCDev'
-        intronlessGCDev[key] = intronlessPrimers[key]
 
-for key in intronlessGCDev:
-    intronlessReruns.pop(key)
+if len(intronlessReruns) > 0:
+    intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
+    for key in intronlessPrimers:
+        if (not intronlessPrimers[key].exceptions and
+           not intronlessPrimers[key].offTargets and
+           not intronlessPrimers[key].noPrimersFound):
+            intronlessPrimers[key].finalStatus = 'INTRONLESS_GCDev'
+            intronlessGCDev[key] = intronlessPrimers[key]
+    for key in intronlessGCDev:
+        intronlessReruns.pop(key)
 
 # primer TM
 intronlessParams['PRIMER_MIN_TM'] = '52'
-intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
 intronlessLowTM = {}
-for key in intronlessPrimers:
-    if (not intronlessPrimers[key].exceptions and
-       not intronlessPrimers[key].offTargets and
-       not intronlessPrimers[key].noPrimersFound):
-        intronlessPrimers[key].finalStatus = 'INTRONLESS_GCDev'
-        intronlessLowTM[key] = intronlessPrimers[key]
 
-for key in intronlessLowTM:
-    intronlessReruns.pop(key)
+if len(intronlessReruns) > 0:
+    intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
+    for key in intronlessPrimers:
+        if (not intronlessPrimers[key].exceptions and
+           not intronlessPrimers[key].offTargets and
+           not intronlessPrimers[key].noPrimersFound):
+            intronlessPrimers[key].finalStatus = 'INTRONLESS_GCDev'
+            intronlessLowTM[key] = intronlessPrimers[key]
+    for key in intronlessLowTM:
+        intronlessReruns.pop(key)
 
 # self complementarity
 intronlessParams['SELF_ANY'] = '5'
 intronlessParams['SELF_END'] = '2'
-intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
 intronlessDimers = {}
-for key in intronlessPrimers:
-    if (not intronlessPrimers[key].exceptions and
-       not intronlessPrimers[key].offTargets and
-       not intronlessPrimers[key].noPrimersFound):
-        intronlessPrimers[key].finalStatus = 'INTRONLESS_GCDev'
-        intronlessDimers[key] = intronlessPrimers[key]
 
-for key in intronlessDimers:
-    intronlessReruns.pop(key)
+if len(intronlessReruns) > 0:
+    intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
+    for key in intronlessPrimers:
+        if (not intronlessPrimers[key].exceptions and
+           not intronlessPrimers[key].offTargets and
+           not intronlessPrimers[key].noPrimersFound):
+            intronlessPrimers[key].finalStatus = 'INTRONLESS_GCDev'
+            intronlessDimers[key] = intronlessPrimers[key]
+    for key in intronlessDimers:
+        intronlessReruns.pop(key)
 
 # Return to non-strict intron-spanning primers
 # b. relax perameters and re-iterate
@@ -394,8 +400,9 @@ for key in intronlessReruns:
         intronlessReruns[key].finalStatus = 'primer_quality_too_low'
 
 primerSets = [strictPrimers, relaxedGC1, relaxedGC0, relaxedBad,
-              relaxedGCCont, relaxedDimers, intronlessDimers, intronlessLowTM,
-              intronlessGC1, intronlessGC0, intronlessStrict, intronlessGCDev]
+              relaxedGCCont, relaxedDimers, intronlessDimers,
+              intronlessLowTM, intronlessGC1, intronlessGC0,
+              intronlessStrict, intronlessGCDev]
 
 primerStrings = ['strictPrimers', 'relaxedGC1', 'relaxedGC0', 'relaxedBad',
                  'relaxedGCCont', 'relaxedDimers', 'intronlessDimers',
