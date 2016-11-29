@@ -2,27 +2,32 @@
 # -*- coding: utf-8 -*-
 
 import requests
-from bs4 import BeautifulSoup
 import re
+import time
+from bs4 import BeautifulSoup
+from progressbar import ProgressBar, Timer
 
-primerBlastUrl = 'http://www.ncbi.nlm.nih.gov/tools/primer-blast/primertool.cgi'
+#############
+# Variables #
+#############
+
+primerBlastUrl = ('https://www.ncbi.nlm.nih.gov/tools/'
+                  'primer-blast/primertool.cgi')
 
 #########
 # Class #
 #########
 
 # The __init__ and pollResults methods both retrieve the current results page
-# from the BLAST server and convert it to html for parsing. The main difference
-# is that pollResults prints the html to a file.
-#
-# Instead of running the methods from the main script and storing them in a
-# dict there, they could be called from the main script and stored as
-# attributes of the primerBlastResults instance. This would make the
+# from the BLAST server and convert it to html for parsing.
+
+
+# The methods are called from the main script and the results are stored as
+# attributes of the primerBlastResults instance. This maked the
 # primerBlastResults instance act like a big dictionary (one:many). To acheive
 # this, the __init__ method has to initiate empty paramaters, which are then
 # filled out by the subsequent methods (so the methods update the instance
 # rather than returning values)
-
 
 class primerBlastResults:
     '''For retrieving and parsing results from the NCBI Primer-BLAST server.'''
@@ -31,7 +36,7 @@ class primerBlastResults:
                  noPrimersFound=None, offTargets=None, finalStatus=None,
                  F=None, R=None, TM_F=None, TM_R=None, ProductSize=None,
                  IntronSize=None,
-                 blastUrl='http://www.ncbi.nlm.nih.gov/tools/primer-blast/primertool.cgi'):
+                 blastUrl=primerBlastUrl):
         '''Initiliase an instance of primerBlastResults by downloading the html
         for LOC from blastUrl using job_key.
         '''
@@ -74,7 +79,7 @@ class primerBlastResults:
         '''(primerBlastResults) -> NoneType
 
         Retrieve the current status or results page for primerBlastResults and
-        update self.html. Output the html to file LOC.html
+        update self.html.
 
         '''
         statusPageResponse = requests.get(self.blastUrl,
@@ -101,10 +106,11 @@ class primerBlastResults:
 
         '''
         if self.html.find(class_='error'):
-            self.exceptions = 'Exception' in self.html.find(class_='error').text
+            self.exceptions = ('Exception' in
+                               self.html.find(class_='error').text)
         elif self.html.find(class_='info'):
-            if 'junction cannot be found' in self.html.find(class_='info').text:
-                self.exceptions = 'Exception'
+            self.exceptions = ('junction cannot be found' in
+                               self.html.find(class_='info').text)
         else:
             self.exceptions = False
 
@@ -116,7 +122,8 @@ class primerBlastResults:
 
         '''
         if self.html.find(class_='paramSummary'):
-            self.offTargets = 'may not be specific' in self.html.find(class_='paramSummary').text
+            self.offTargets = ('may not be specific' in
+                               self.html.find(class_='paramSummary').text)
         else:
             self.offTargets = False
 
@@ -150,7 +157,6 @@ class primerBlastResults:
         pIntronSize = re.compile('Total intron size(\d*)')
         pTMF = re.compile('Forward primer.*?(\d\d\\.\d\d)')
         pTMR = re.compile('Reverse primer.*?(\d\d\\.\d\d)')
-        # primerText = self.html.find(class_='prPairDtl').text
         primerTable = self.html.find(class_='prPairInfo').table.text
         self.F = pF.search(primerTable).group(1)
         self.R = pR.search(primerTable).group(1)
@@ -162,10 +168,12 @@ class primerBlastResults:
     def csvLine(self):
         '''(primerBlastResults) -> str
 
-        Return a line of csv output.        
+        Return a line of csv output.
 
         '''
-        return '{0},{1},{2},{3},{4},{5},{6},{7},{8}'.format(self.LOC, self.RefSeq, self.finalStatus, self.F, self.TM_F, self.R, self.TM_R, self.ProductSize, self.IntronSize)
+        return '{0},{1},{2},{3},{4},{5},{6},{7},{8}'.format(
+            self.LOC, self.RefSeq, self.finalStatus, self.F, self.TM_F, self.R,
+            self.TM_R, self.ProductSize, self.IntronSize)
 
     def replaceCssLinks(self):
         '''(primerBlastResults) -> NoneType
@@ -175,16 +183,52 @@ class primerBlastResults:
         '''
         cssLinks = self.html.findAll(href=re.compile('css'))
         for link in cssLinks:
-            link['href'] = 'http://www.ncbi.nlm.nih.gov/tools/primer-blast/' + link['href']
+            link['href'] = ('http://www.ncbi.nlm.nih.gov/tools/primer-blast/' +
+                            link['href'])
 
 #############
 # Functions #
 #############
 
 
+def submitBLASTjob(RefSeqID, parameters,
+                   primerBlastUrl=primerBlastUrl):
+    '''(str, dict, str) -> Response
+
+    Post the BLAST job for RefSeqID to primerBlastUrl with parameters and
+    return the http Response.
+
+    '''
+    post_params = parameters.copy()
+    post_params['INPUT_SEQUENCE'] = RefSeqID
+    return(requests.get(primerBlastUrl, params=post_params))
+
+
+def get_job_key(Response):
+    '''(str) -> str
+
+    Parse the html in Response and return the job_key
+
+    '''
+    soup = BeautifulSoup(Response.content, 'xml')
+    # first choice is the proper "job_key" tag
+    if soup.find(NAME='job_key'):
+        return(soup.find(NAME='job_key')['VALUE'])
+    # otherwise, try to parse the 'Job id' from `breadcrumb`
+    elif soup.find(id='breadcrumb'):
+        bc_strings = [
+            x for x in soup.find(id='breadcrumb').stripped_strings]
+        bc_search = re.compile(r'Job id\=(\S+)$')
+        for bc_string in bc_strings:
+            if bc_search.search(bc_string):
+                return(bc_search.search(bc_string).groups()[0])
+
+
 def runBlast(MsuRefSeq, parameters,
-             primerBlastUrl='http://www.ncbi.nlm.nih.gov/tools/primer-blast/primertool.cgi'):
-    '''(dict of LOC:RefSeq, dict of parameters) -> dict of LOC:primerBlastResults
+             primerBlastUrl=primerBlastUrl):
+
+    '''(dict of LOC:RefSeq, dict of parameters) ->
+    dict of LOC:primerBlastResults
 
     Submit primer-BLAST jobs to primerBlastUrl for RefSeq IDs in MsuRefSeq
     using parameters. Poll the BLAST server until jobs finish. Update and parse
@@ -192,47 +236,6 @@ def runBlast(MsuRefSeq, parameters,
     instances.
 
     '''
-    # Function for submitting BLAST job. Currently getting a lot of responses
-    # that don't contain a job_key. Have to investigate manually.
-
-    def submitBLASTjob(RefSeqID, parameters,
-                       primerBlastUrl='http://www.ncbi.nlm.nih.gov/tools/primer-blast/primertool.cgi'):
-        '''(str, dict, str) -> Response
-
-        Post the BLAST job for RefSeqID to primerBlastUrl with parameters and
-        return the http Response.
-
-        '''
-        post_params = parameters.copy()
-        post_params['INPUT_SEQUENCE'] = RefSeqID
-        return(requests.get(primerBlastUrl, params=post_params))
-
-    # Function for getting job_key
-    def get_job_key(Response):
-        '''(str) -> str
-
-        Parse the html in Response and return the job_key
-
-        '''
-        soup = BeautifulSoup(Response.content, 'xml')
-        # first choice is the proper "job_key" tag
-        if soup.find(NAME='job_key'):
-            return(soup.find(NAME='job_key')['VALUE'])
-        # otherwise, try to parse the 'Job id' from `breadcrumb`
-        elif soup.find(id='breadcrumb'):
-            bc_strings = [
-                x for x in soup.find(id='breadcrumb').stripped_strings]
-            bc_search = re.compile(r'Job id\=(\S+)$')
-            for bc_string in bc_strings:
-                if bc_search.search(bc_string):
-                    return(bc_search.search(bc_string).groups()[0])
-
-    # Code for runBlast starts here
-
-    from progressbar import ProgressBar, Timer
-    import requests
-    from bs4 import BeautifulSoup
-    import time
 
     # Submit BLAST jobs
     print('Submitting BLAST jobs.')
@@ -273,8 +276,6 @@ def runBlast(MsuRefSeq, parameters,
     while statuses >= 1:
         print('Waiting 60 seconds for jobs to complete')
         timer = ProgressBar(widgets=[Timer()], maxval=60).start()
-        # for testing
-        # for i in range(10):
         for i in range(60):
             time.sleep(1)
             timer.update(i)

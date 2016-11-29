@@ -9,8 +9,8 @@
 
 import os
 import argparse
-from primerDesignFunctions import runBlast
-# from rtPrimerDesign.primerDesignFunctions import runBlast
+# import rtPrimerDesign.functions
+import functions
 import subprocess
 import csv
 import urllib
@@ -41,7 +41,7 @@ parameters = {
     'PRIMER_MAX_DIFF_TM': '5',
     'MIN_INTRON_SIZE': '0',
     'MAX_INTRON_SIZE': '1000000',
-    'PRIMER_SPECIFICITY_DATABASE': 'refseq_rna',
+    'PRIMER_SPECIFICITY_DATABASE': 'refseq_mrna',
     'EXCLUDE_ENV': 'on',
     'EXCLUDE_XM': 'on',
     'ORGANISM': 'Oryza sativa Japonica Group (taxid:39947)',
@@ -84,7 +84,7 @@ for row in RapMsuRefSeq:
     MsuRefSeq[row[0]] = row[1]
 
 # 3. initial call to runBlast function
-ResultsPages = runBlast(MsuRefSeq, parameters=parameters)
+ResultsPages = functions.runBlast(MsuRefSeq, parameters=parameters)
 
 # primers that worked first time
 strictPrimers = {}
@@ -124,7 +124,7 @@ intronlessParams.pop('SPAN_INTRON')
 intronlessStrict = {}
 
 if len(intronlessReruns) > 0:
-    intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
+    intronlessPrimers = functions.runBlast(intronlessReruns, intronlessParams)
     for key in intronlessPrimers:
         if (not intronlessPrimers[key].exceptions and
            not intronlessPrimers[key].offTargets and
@@ -139,7 +139,7 @@ intronlessParams['GC_CLAMP'] = '1'
 intronlessGC1 = {}
 
 if len(intronlessReruns) > 0:
-    intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
+    intronlessPrimers = functions.runBlast(intronlessReruns, intronlessParams)
     for key in intronlessPrimers:
         if (not intronlessPrimers[key].exceptions and not
            intronlessPrimers[key].offTargets and not
@@ -153,7 +153,7 @@ intronlessParams['GC_CLAMP'] = '0'
 intronlessGC0 = {}
 
 if len(intronlessReruns) > 0:
-    intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
+    intronlessPrimers = functions.runBlast(intronlessReruns, intronlessParams)
     for key in intronlessPrimers:
         if (not intronlessPrimers[key].exceptions and not
            intronlessPrimers[key].offTargets and not
@@ -169,7 +169,7 @@ intronlessParams['PRIMER_MAX_GC'] = '60'
 intronlessGCDev = {}
 
 if len(intronlessReruns) > 0:
-    intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
+    intronlessPrimers = functions.runBlast(intronlessReruns, intronlessParams)
     for key in intronlessPrimers:
         if (not intronlessPrimers[key].exceptions and
            not intronlessPrimers[key].offTargets and
@@ -184,7 +184,7 @@ intronlessParams['PRIMER_MIN_TM'] = '52'
 intronlessLowTM = {}
 
 if len(intronlessReruns) > 0:
-    intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
+    intronlessPrimers = functions.runBlast(intronlessReruns, intronlessParams)
     for key in intronlessPrimers:
         if (not intronlessPrimers[key].exceptions and
            not intronlessPrimers[key].offTargets and
@@ -200,7 +200,7 @@ intronlessParams['SELF_END'] = '2'
 intronlessDimers = {}
 
 if len(intronlessReruns) > 0:
-    intronlessPrimers = runBlast(intronlessReruns, intronlessParams)
+    intronlessPrimers = functions.runBlast(intronlessReruns, intronlessParams)
     for key in intronlessPrimers:
         if (not intronlessPrimers[key].exceptions and
            not intronlessPrimers[key].offTargets and
@@ -225,7 +225,7 @@ relaxedParams['GC_CLAMP'] = '1'
 relaxedGC1 = {}
 
 if relaxedReruns:
-    relaxedPrimers = runBlast(relaxedReruns, relaxedParams)
+    relaxedPrimers = functions.runBlast(relaxedReruns, relaxedParams)
 else:
     relaxedPrimers = {}
 
@@ -244,7 +244,7 @@ relaxedParams['GC_CLAMP'] = '0'
 relaxedGC0 = {}
 
 if relaxedReruns:
-    relaxedPrimers = runBlast(relaxedReruns, relaxedParams)
+    relaxedPrimers = functions.runBlast(relaxedReruns, relaxedParams)
 else:
     relaxedPrimers = {}
 
@@ -270,7 +270,7 @@ relaxedGCCont = {}
 
 if relaxedReruns:
     print('Trying again with relaxed parameters: GC Content\n')
-    relaxedPrimers = runBlast(relaxedReruns, relaxedParams)
+    relaxedPrimers = functions.runBlast(relaxedReruns, relaxedParams)
 else:
     relaxedPrimers = {}
 
@@ -294,7 +294,7 @@ relaxedTM = {}
 
 if relaxedReruns:
     print('Trying again with relaxed parameters: Primer TM\n')
-    relaxedPrimers = runBlast(relaxedReruns, relaxedParams)
+    relaxedPrimers = functions.runBlast(relaxedReruns, relaxedParams)
 else:
     relaxedPrimers = {}
 
@@ -319,7 +319,7 @@ relaxedDimers = {}
 
 if relaxedReruns:
     print('Trying again with relaxed parameters: Self complementarity\n')
-    relaxedPrimers = runBlast(relaxedReruns, relaxedParams)
+    relaxedPrimers = functions.runBlast(relaxedReruns, relaxedParams)
 else:
     relaxedPrimers = {}
 
@@ -345,7 +345,7 @@ relaxedBad = {}
 if relaxedReruns:
     print('Trying again with DEFAULT parameters: Self complementarity\n'
           'n.b. These primers may not work well.\n')
-    relaxedPrimers = runBlast(relaxedReruns, relaxedParams)
+    relaxedPrimers = functions.runBlast(relaxedReruns, relaxedParams)
 else:
     relaxedPrimers = {}
 
@@ -365,7 +365,7 @@ relaxedParams.pop('LOW_COMPLEXITY_FILTER')
 relaxedNoFilter = {}
 
 if relaxedReruns:
-    relaxedPrimers = runBlast(relaxedReruns, relaxedParams)
+    relaxedPrimers = functions.runBlast(relaxedReruns, relaxedParams)
 else:
     relaxedPrimers = {}
 
