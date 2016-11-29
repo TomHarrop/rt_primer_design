@@ -7,6 +7,7 @@ import time
 from bs4 import BeautifulSoup
 from progressbar import ProgressBar, Timer
 
+
 #############
 # Variables #
 #############
@@ -14,13 +15,13 @@ from progressbar import ProgressBar, Timer
 primerBlastUrl = ('https://www.ncbi.nlm.nih.gov/tools/'
                   'primer-blast/primertool.cgi')
 
+
 #########
 # Class #
 #########
 
 # The __init__ and pollResults methods both retrieve the current results page
 # from the BLAST server and convert it to html for parsing.
-
 
 # The methods are called from the main script and the results are stored as
 # attributes of the primerBlastResults instance. This maked the
@@ -214,7 +215,7 @@ def get_job_key(Response):
     # first choice is the proper "job_key" tag
     if soup.find(NAME='job_key'):
         return(soup.find(NAME='job_key')['VALUE'])
-    # otherwise, try to parse the 'Job id' from `breadcrumb`
+    # otherwise, try to parse the 'Job id' from `breadcrumb` with regex :(
     elif soup.find(id='breadcrumb'):
         bc_strings = [
             x for x in soup.find(id='breadcrumb').stripped_strings]
