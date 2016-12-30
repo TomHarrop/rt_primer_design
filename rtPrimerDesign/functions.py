@@ -66,6 +66,12 @@ class primerBlastResults:
         self.url = blast_result.url
         self.html = BeautifulSoup(blast_result.content, 'lxml')
 
+        # get a job_key
+        self.get_job_key()
+
+        # poll the results once to get the finished page
+        self.pollResults()
+
     def __eq__(self, other):
         '''(primerBlastResults, primerBlastResults) -> bool
 
@@ -224,7 +230,8 @@ class primerBlastResults:
     def check_similar_templates(self):
         '''(primerBlastResults) -> NoneType
 
-        Check for similar templates and store in self.user_seqloc
+        Check for similar templates and store in self.user_seqloc. Rerun
+        BLAST with similar sequences enabled.
 
         '''
         if (('Your PCR template is highly similar '
@@ -239,10 +246,11 @@ class primerBlastResults:
             post_parameters['USER_SEQLOC'] = self.user_seqloc
 
             # this is effectively a new BLAST search so expect a new job_key
-            blast_response = requests.get(
+            blast_result = requests.get(
                 self.blastUrl,
                 params=post_parameters)
-            self.html = BeautifulSoup(blast_response.content, 'lxml')
+            self.html = BeautifulSoup(blast_result.content, 'lxml')
+            self.url = blast_result.url
             self.get_job_key()
             self.pollResults()
 
@@ -250,6 +258,24 @@ class primerBlastResults:
 #############
 # Functions #
 #############
+
+def run_primer_blast(refseq_ids):
+    '''(list) -> dict of refseq_ids:primerBlastResults
+
+    Initialise a primerBlastResults for each entry in refseq_ids. Run the
+    BLAST search, poll results until they finish and check for problems.
+    The problems will be checked here but deciding what to do with the primers
+    should happen in __main__
+
+    PROBLEM                         ACTION
+    no exon/exon junction           store exception and process separately
+    similar sequences               parse USER_SEQLOC and resubmit query
+    no primers found                store in self.noPrimersFound
+    primers not specific            store in self.offTargets
+
+    '''
+    pass
+
 
 def submitBLASTjob(RefSeqID, parameters,
                    primerBlastUrl=primerBlastUrl):
