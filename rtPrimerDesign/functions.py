@@ -24,32 +24,47 @@ primerBlastUrl = ('https://www.ncbi.nlm.nih.gov/tools/'
 # from the BLAST server and convert it to html for parsing.
 
 # The methods are called from the main script and the results are stored as
-# attributes of the primerBlastResults instance. This maked the
+# attributes of the primerBlastResults instance. This makes the
 # primerBlastResults instance act like a big dictionary (one:many). To acheive
 # this, the __init__ method has to initiate empty paramaters, which are then
-# filled out by the subsequent methods (so the methods update the instance
-# rather than returning values)
+# filled out by the methods (so the methods update the instance rather than
+# returning values)
 
 class primerBlastResults:
     '''For retrieving and parsing results from the NCBI Primer-BLAST server.'''
-    def __init__(self, job_key, LOC, RefSeq,
-                 html=None, url=None, running=None, exceptions=None,
-                 noPrimersFound=None, offTargets=None, finalStatus=None,
-                 F=None, R=None, TM_F=None, TM_R=None, ProductSize=None,
+    def __init__(self, RefSeq, blast_parameters,
+                 job_key=None,
+                 html=None,
+                 url=None,
+                 running=None,
+                 exceptions=None,
+                 noPrimersFound=None,
+                 offTargets=None,
+                 finalStatus=None,
+                 F=None,
+                 R=None,
+                 TM_F=None,
+                 TM_R=None,
+                 ProductSize=None,
                  IntronSize=None,
+                 user_seqloc=None,
                  blastUrl=primerBlastUrl):
-        '''Initiliase an instance of primerBlastResults by downloading the html
-        for LOC from blastUrl using job_key.
+
         '''
-        self.job_key = job_key
-        self.LOC = LOC
+        Initiliase an instance of primerBlastResults by submitting the BLAST
+        search and downloading the html response
+        '''
         self.blastUrl = blastUrl
         self.RefSeq = RefSeq
-        statusPageResponse = requests.get(self.blastUrl,
-                                          params={'job_key': self.job_key})
-        self.url = statusPageResponse.url
-        self.html = BeautifulSoup(statusPageResponse.content, 'lxml')
-        self.exceptions = None
+        self.blast_parameters = blast_parameters.copy()
+
+        # submit the BLAST request and get the response page
+        self.blast_parameters['INPUT_SEQUENCE'] = self.RefSeq
+        blast_result = requests.get(
+            self.blastUrl,
+            params=self.blast_parameters)
+        self.url = blast_result.url
+        self.html = BeautifulSoup(blast_result.content, 'lxml')
 
     def __eq__(self, other):
         '''(primerBlastResults, primerBlastResults) -> bool
@@ -66,6 +81,25 @@ class primerBlastResults:
 
         '''
         return self.html
+
+    def get_job_key(self):
+        '''(primerBlastResults) -> NoneType
+
+        Retrieve the job_key and store in self.job_key
+
+        '''
+
+        # get the job_key. first choice is the proper "job_key" tag
+        if self.html(attrs={'name': 'job_key'}):
+            self.job_key = self.html.find(attrs={'name': 'job_key'})['value']
+        # otherwise, try to parse the 'Job id' from `breadcrumb` with regex :(
+        elif self.html.find(id='breadcrumb'):
+            bc_strings = [
+                x for x in self.html.find(id='breadcrumb').stripped_strings]
+            bc_search = re.compile(r'Job id\=(\S+)$')
+            for bc_string in bc_strings:
+                if bc_search.search(bc_string):
+                    self.job_key = bc_search.search(bc_string).groups()[0]
 
     def printFile(self, subdir):
         '''(primerBlastResults) -> NoneType
@@ -187,10 +221,35 @@ class primerBlastResults:
             link['href'] = ('http://www.ncbi.nlm.nih.gov/tools/primer-blast/' +
                             link['href'])
 
+    def check_similar_templates(self):
+        '''(primerBlastResults) -> NoneType
+
+        Check for similar templates and store in self.user_seqloc
+
+        '''
+        if (('Your PCR template is highly similar '
+             'to the following sequence') in self.html.find(id='expl').text):
+            self.user_seqloc = [
+                x['value'] for x in self.html.find_all(
+                    name='input',
+                    type='checkbox',
+                    attrs={'name': 'USER_SEQLOC'})]
+            post_parameters = self.blast_parameters.copy()
+            post_parameters['TRY_USER_GUIDE'] = 'yes'
+            post_parameters['USER_SEQLOC'] = self.user_seqloc
+
+            # this is effectively a new BLAST search so expect a new job_key
+            blast_response = requests.get(
+                self.blastUrl,
+                params=post_parameters)
+            self.html = BeautifulSoup(blast_response.content, 'lxml')
+            self.get_job_key()
+            self.pollResults()
+
+
 #############
 # Functions #
 #############
-
 
 def submitBLASTjob(RefSeqID, parameters,
                    primerBlastUrl=primerBlastUrl):
@@ -211,10 +270,10 @@ def get_job_key(Response):
     Parse the html in Response and return the job_key
 
     '''
-    soup = BeautifulSoup(Response.content, 'xml')
+    soup = BeautifulSoup(Response.content, 'lxml')
     # first choice is the proper "job_key" tag
-    if soup.find(NAME='job_key'):
-        return(soup.find(NAME='job_key')['VALUE'])
+    if soup.find(attrs={'name': 'job_key'}):
+        return(soup.find(attrs={'name': 'job_key'})['value'])
     # otherwise, try to parse the 'Job id' from `breadcrumb` with regex :(
     elif soup.find(id='breadcrumb'):
         bc_strings = [
