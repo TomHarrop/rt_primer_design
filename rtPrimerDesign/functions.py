@@ -37,6 +37,7 @@ class primerBlastResults:
                  html=None,
                  url=None,
                  running=None,
+                 no_intron=None,
                  exceptions=None,
                  noPrimersFound=None,
                  offTargets=None,
@@ -149,11 +150,19 @@ class primerBlastResults:
         if self.html.find(class_='error'):
             self.exceptions = ('Exception' in
                                self.html.find(class_='error').text)
-        elif self.html.find(class_='info'):
-            self.exceptions = ('junction cannot be found' in
-                               self.html.find(class_='info').text)
         else:
             self.exceptions = False
+
+    def check_introns(self):
+        '''(primerBlastResults) -> NoneType
+
+        Parse self.html and update self.no_intron to True if 'junction cannot
+        be found' is in the 'info' tag
+
+        '''
+        if self.html.find(class_='info'):
+            self.no_intron = ('junction cannot be found' in
+                               self.html.find(class_='info').text)
 
     def checkSpecificity(self):
         '''(primerBlastResults) -> NoneType
@@ -234,26 +243,27 @@ class primerBlastResults:
         BLAST with similar sequences enabled.
 
         '''
-        if (('Your PCR template is highly similar '
-             'to the following sequence') in self.html.find(id='expl').text):
-            self.user_seqloc = [
-                x['value'] for x in self.html.find_all(
-                    name='input',
-                    type='checkbox',
-                    attrs={'name': 'USER_SEQLOC'})]
-            post_parameters = self.blast_parameters.copy()
-            post_parameters['TRY_USER_GUIDE'] = 'yes'
-            post_parameters['USER_SEQLOC'] = self.user_seqloc
+        if self.html.find(id='expl'):
+            if (('Your PCR template is highly similar to the following'
+                 ' sequence') in self.html.find(id='expl').text):
+                self.user_seqloc = [
+                    x['value'] for x in self.html.find_all(
+                        name='input',
+                        type='checkbox',
+                        attrs={'name': 'USER_SEQLOC'})]
+                post_parameters = self.blast_parameters.copy()
+                post_parameters['TRY_USER_GUIDE'] = 'yes'
+                post_parameters['USER_SEQLOC'] = self.user_seqloc
 
-            # this is effectively a new BLAST search so expect a new job_key
-            blast_result = requests.get(
-                self.blastUrl,
-                params=post_parameters)
-            self.html = BeautifulSoup(blast_result.content, 'lxml')
-            self.url = blast_result.url
-            self.get_job_key()
-            self.pollResults()
-
+                # this is effectively a new BLAST search so expect a new
+                # job_key
+                blast_result = requests.get(
+                    self.blastUrl,
+                    params=post_parameters)
+                self.html = BeautifulSoup(blast_result.content, 'lxml')
+                self.url = blast_result.url
+                self.get_job_key()
+                self.pollResults()
 
 #############
 # Functions #
