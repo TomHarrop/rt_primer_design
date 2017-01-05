@@ -32,7 +32,7 @@ primerBlastUrl = ('https://www.ncbi.nlm.nih.gov/tools/'
 
 class primerBlastResults:
     '''For retrieving and parsing results from the NCBI Primer-BLAST server.'''
-    def __init__(self, RefSeq, blast_parameters,
+    def __init__(self, RefSeq, status, blast_parameters,
                  job_key=None,
                  html=None,
                  url=None,
@@ -41,7 +41,6 @@ class primerBlastResults:
                  exceptions=None,
                  noPrimersFound=None,
                  offTargets=None,
-                 finalStatus=None,
                  F=None,
                  R=None,
                  TM_F=None,
@@ -58,6 +57,7 @@ class primerBlastResults:
         self.blastUrl = blastUrl
         self.RefSeq = RefSeq
         self.blast_parameters = blast_parameters.copy()
+        self.status = status
 
         # submit the BLAST request and get the response page
         self.blast_parameters['INPUT_SEQUENCE'] = self.RefSeq
@@ -127,6 +127,7 @@ class primerBlastResults:
         statusPageResponse = requests.get(self.blastUrl,
                                           params={'job_key': self.job_key})
         self.html = BeautifulSoup(statusPageResponse.content, 'lxml')
+        self.checkRunning()
 
     def checkRunning(self):
         '''(primerBlastResults) -> NoneType
@@ -221,9 +222,15 @@ class primerBlastResults:
         Return a line of csv output.
 
         '''
-        return '{0},{1},{2},{3},{4},{5},{6},{7},{8}'.format(
-            self.LOC, self.RefSeq, self.finalStatus, self.F, self.TM_F, self.R,
-            self.TM_R, self.ProductSize, self.IntronSize)
+        return '{0},{1},{2},{3},{4},{5},{6},{7}'.format(
+            self.RefSeq,        # 0
+            self.status,        # 1
+            self.F,             # 2
+            self.TM_F,          # 3
+            self.R,             # 4
+            self.TM_R,          # 5
+            self.ProductSize,   # 6
+            self.IntronSize)    # 7
 
     def replaceCssLinks(self):
         '''(primerBlastResults) -> NoneType
@@ -251,19 +258,23 @@ class primerBlastResults:
                         name='input',
                         type='checkbox',
                         attrs={'name': 'USER_SEQLOC'})]
+                print("%s: Found similar sequences: %s" % 
+                      (self.RefSeq, self.user_seqloc))
                 post_parameters = self.blast_parameters.copy()
                 post_parameters['TRY_USER_GUIDE'] = 'yes'
                 post_parameters['USER_SEQLOC'] = self.user_seqloc
 
                 # this is effectively a new BLAST search so expect a new
                 # job_key
+                self.blast_parameters = post_parameters
                 blast_result = requests.get(
                     self.blastUrl,
-                    params=post_parameters)
+                    params=self.blast_parameters)
                 self.html = BeautifulSoup(blast_result.content, 'lxml')
                 self.url = blast_result.url
                 self.get_job_key()
                 self.pollResults()
+
 
 #############
 # Functions #

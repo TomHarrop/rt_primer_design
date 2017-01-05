@@ -15,6 +15,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'beautifulsoup4>=4.5.1',
+        'joblib>=0.9.4',
         'lxml>=3.7.1',
         'progressbar2>=3.12.0',
         'requests>=2.12.4'],
