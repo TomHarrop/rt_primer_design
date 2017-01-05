@@ -8,6 +8,7 @@
 import rtPrimerDesign.functions as functions
 import time
 import joblib
+import tompytools
 
 
 #############
@@ -22,7 +23,7 @@ def run_primer_blast(
         wait_seconds=60,
         verbose=False):
     if verbose:
-        print('Running BLAST for %s' % refseq_id)
+        tompytools.generate_message('Running BLAST for %s' % refseq_id)
     # run a BLAST search
     blast_result = functions.primerBlastResults(
         RefSeq=refseq_id,
@@ -31,38 +32,38 @@ def run_primer_blast(
     # wait for job to finish
     while blast_result.running:
         if verbose:
-            print('%s: Waiting %i seconds for BLAST' % 
-                  (refseq_id, wait_seconds))
+            tompytools.generate_message(
+                '%s: Waiting %i seconds for BLAST' % (refseq_id, wait_seconds))
         time.sleep(wait_seconds)
         if verbose:
-            print('%s.pollResults()' % refseq_id)
+            tompytools.generate_message('%s.pollResults()' % refseq_id)
         blast_result.pollResults()
     # check for exon/exon junction
     if verbose:
-        print('%s.check_introns()' % refseq_id)
+        tompytools.generate_message('%s.check_introns()' % refseq_id)
     blast_result.check_introns()
     # check for similar sequences and re-run if required
     if verbose:
-        print('%s.check_similar_templates()' % refseq_id)
+        tompytools.generate_message('%s.check_similar_templates()' % refseq_id)
     blast_result.check_similar_templates()
     while blast_result.running:
         if verbose:
-            print('%s Waiting %i seconds for BLAST' % 
-                  (refseq_id, wait_seconds))
+            tompytools.generate_message(
+                '%s Waiting %i seconds for BLAST' % (refseq_id, wait_seconds))
         time.sleep(wait_seconds)
         if verbose:
-            print('%s.pollResults()' % refseq_id)
+            tompytools.generate_message('%s.pollResults()' % refseq_id)
         blast_result.pollResults()
     # check if we found primers
     if verbose:
-        print('%s.checkSuccess()' % refseq_id)
+        tompytools.generate_message('%s.checkSuccess()' % refseq_id)
     blast_result.checkSuccess()
     if verbose:
-        print('%s.checkSpecificity()' % refseq_id)
+        tompytools.generate_message('%s.checkSpecificity()' % refseq_id)
     blast_result.checkSpecificity()
     if not (blast_result.noPrimersFound or blast_result.offTargets):
         if verbose:
-            print('%s.parsePrimers()' % refseq_id)
+            tompytools.generate_message('%s.parsePrimers()' % refseq_id)
         blast_result.parsePrimers()
     # return primerBlastResults
     return(blast_result)
@@ -82,7 +83,7 @@ def run_iterative_primer_blast(
         verbose=verbose)
     # re-run without intron span
     if test_blast_result.no_intron:
-        print('Record %s has no introns' % test_refseq)
+        tompytools.generate_message('Record %s has no introns' % test_refseq)
         test_blast_result.blast_parameters.pop('SPAN_INTRON')
         test_blast_result = run_primer_blast(
             refseq_id=test_blast_result.RefSeq,
@@ -92,7 +93,7 @@ def run_iterative_primer_blast(
             verbose=verbose)
     # re-run with lower clamp requirements
     if test_blast_result.noPrimersFound or test_blast_result.offTargets:
-        print('%s: Relaxing GC clamp' % test_refseq)
+        tompytools.generate_message('%s: Relaxing GC clamp' % test_refseq)
         test_blast_result.status = 'GC1'
         test_blast_result.blast_parameters['GC_CLAMP'] = '1'
         test_blast_result = run_primer_blast(
@@ -112,7 +113,7 @@ def run_iterative_primer_blast(
             verbose=verbose)
     # rerun with lower GC requirements
     if test_blast_result.noPrimersFound or test_blast_result.offTargets:
-        print('%s: Relaxing GC content' % test_refseq)
+        tompytools.generate_message('%s: Relaxing GC content' % test_refseq)
         test_blast_result.status = 'GC_content'
         test_blast_result.blast_parameters['PRIMER_MIN_GC'] = '35'
         test_blast_result.blast_parameters['PRIMER_MAX_GC'] = '65'
@@ -124,7 +125,7 @@ def run_iterative_primer_blast(
             verbose=verbose)
     # rerun with lower primer TM requirements
     if test_blast_result.noPrimersFound or test_blast_result.offTargets:
-        print('%s: Relaxing primer TM' % test_refseq)
+        tompytools.generate_message('%s: Relaxing primer TM' % test_refseq)
         test_blast_result.status = 'Low_TM'
         test_blast_result.blast_parameters['PRIMER_MIN_TM'] = '52'
         test_blast_result = run_primer_blast(
@@ -135,7 +136,8 @@ def run_iterative_primer_blast(
             verbose=verbose)
     # rerun with lower primer complementarity requirements
     if test_blast_result.noPrimersFound or test_blast_result.offTargets:
-        print('%s: Relaxing primer self-complementarity' % test_refseq)
+        tompytools.generate_message(
+            '%s: Relaxing primer self-complementarity' % test_refseq)
         test_blast_result.status = 'Potential_Dimers'
         test_blast_result.blast_parameters['SELF_ANY'] = '5'
         test_blast_result.blast_parameters['SELF_END'] = '2'
@@ -147,8 +149,9 @@ def run_iterative_primer_blast(
             verbose=verbose)
     # rerun with near defaults
     if test_blast_result.noPrimersFound or test_blast_result.offTargets:
-        print('%s: Using default primer self-complementarity (caution)' %
-              test_refseq)
+        tompytools.generate_message(
+            '%s: Using default primer self-complementarity (caution)' %
+            test_refseq)
         test_blast_result.status = 'Probable_Dimers'
         test_blast_result.blast_parameters['SELF_ANY'] = '8'
         test_blast_result.blast_parameters['SELF_END'] = '3'
@@ -160,7 +163,8 @@ def run_iterative_primer_blast(
             verbose=verbose)
     # rerun without complexity filter
     if test_blast_result.noPrimersFound or test_blast_result.offTargets:
-        print('%s: Disabling repeat filter' % test_refseq)
+        tompytools.generate_message(
+            '%s: Disabling repeat filter' % test_refseq)
         test_blast_result.status = 'No_repeat_filter'
         test_blast_result.blast_parameters.pop('LOW_COMPLEXITY_FILTER')
         test_blast_result = run_primer_blast(
@@ -249,10 +253,13 @@ test_iterative_blast_result_2 = run_iterative_primer_blast(
 # multiple genes (joblib)
 refseq_list = ['NM_001062476', 'XM_015768655']
 jobs_to_run = min(len(refseq_list), max_jobs)
-blast_results = joblib.Parallel(n_jobs=jobs_to_run, verbose=5)(
+blast_results = joblib.Parallel(n_jobs=2, verbose=5)(
     joblib.delayed(run_iterative_primer_blast)(
         test_refseq=x,
         strict_parameters=strict_parameters,
         wait_seconds=10,                    # FIXME! wait 60 seconds
         verbose=True) for x in refseq_list)
+
+
+
 

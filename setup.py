@@ -18,6 +18,7 @@ setup(
         'joblib>=0.9.4',
         'lxml>=3.7.1',
         'progressbar2>=3.12.0',
-        'requests>=2.12.4'],
+        'requests>=2.12.4',
+        'tompytools>=0.0.3'],
     zip_safe=False
 )

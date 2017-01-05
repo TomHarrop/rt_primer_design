@@ -104,9 +104,12 @@ class primerBlastResults:
             bc_strings = [
                 x for x in self.html.find(id='breadcrumb').stripped_strings]
             bc_search = re.compile(r'Job id\=(\S+)$')
-            for bc_string in bc_strings:
-                if bc_search.search(bc_string):
-                    self.job_key = bc_search.search(bc_string).groups()[0]
+            self.job_key = [
+                bc_search.search(x).groups()[0] for x in bc_strings
+                if bc_search.search(x)][0]
+            # for bc_string in bc_strings:
+            #     if bc_search.search(bc_string):
+            #         self.job_key = bc_search.search(bc_string).groups()[0]
 
     def printFile(self, subdir):
         '''(primerBlastResults) -> NoneType
