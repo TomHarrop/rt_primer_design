@@ -101,14 +101,18 @@ class primerBlastResults:
             self.job_key = self.html.find(attrs={'name': 'job_key'})['value']
             print('%s: Found job_key %s in attrs' %
                   (self.RefSeq, self.job_key))
+
         # otherwise, try to parse the 'Job id' from `breadcrumb` with regex :(
-        elif self.html.find(id='breadcrumb'):
+        if self.html.find(id='breadcrumb'):
             bc_text = self.html.find(id='breadcrumb').text
             bc_search = re.compile(r'Job id\=(\S+).*')
-            self.job_key = bc_search.search(bc_text).group(1)
-            print('%s: Parsed job_key %s from breadcrumb' %
-                  (self.RefSeq, self.job_key))
-        else:
+            if bc_search.search(bc_text):
+                self.job_key = bc_search.search(bc_text).group(1)
+                print('%s: Parsed job_key %s from breadcrumb' %
+                      (self.RefSeq, self.job_key))
+
+        # otherwise, give up and submit the blast search again
+        if not hasattr(self, "job_key"):
             print('''%s: Couldn't parse job_key''' % self.RefSeq)
             print(self.html)
 

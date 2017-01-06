@@ -235,6 +235,8 @@ wait_seconds = 60
 # Do not contact the server more often than once every three seconds.
 max_jobs = int(wait_seconds/3)
 
+# have to increase the recursion limit for joblib
+sys.setrecursionlimit(10000)
 
 #############
 # TEST CODE #
@@ -256,8 +258,6 @@ test_iterative_blast_result_2 = run_iterative_primer_blast(
     verbose=True)
 
 
-# solve recursion error?
-sys.setrecursionlimit(10000)
 
 # multiple genes (joblib)
 refseq_list = ['NM_001062476', 'XM_015768655']
@@ -268,7 +268,6 @@ blast_results = joblib.Parallel(n_jobs=jobs_to_run, verbose=100)(
         strict_parameters=strict_parameters,
         wait_seconds=wait_seconds,
         verbose=True) for x in refseq_list)
-
 
 long_gene_list = [
     'AK287830', 'CT837746', 'NM_001066571', 'NM_001061339',
