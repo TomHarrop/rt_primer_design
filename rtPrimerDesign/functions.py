@@ -58,20 +58,10 @@ class primerBlastResults:
         self.RefSeq = RefSeq
         self.blast_parameters = blast_parameters.copy()
         self.status = status
-
-        # submit the BLAST request and get the response page
         self.blast_parameters['INPUT_SEQUENCE'] = self.RefSeq
-        blast_result = requests.get(
-            self.blastUrl,
-            params=self.blast_parameters)
-        self.url = blast_result.url
-        self.html = BeautifulSoup(blast_result.content, 'lxml')
 
-        # get a job_key
-        self.get_job_key()
-
-        # poll the results once to get the finished page
-        self.pollResults()
+        # submit the BLAST request
+        self.submit_blast_request()
 
     def __eq__(self, other):
         '''(primerBlastResults, primerBlastResults) -> bool
@@ -88,6 +78,21 @@ class primerBlastResults:
 
         '''
         return self.html
+
+    def submit_blast_request(self):
+        # submit the BLAST request and get the response page
+        blast_result = requests.get(
+            self.blastUrl,
+            params=self.blast_parameters)
+        self.url = blast_result.url
+        self.html = BeautifulSoup(blast_result.content, 'lxml')
+
+        # get a job_key
+        self.get_job_key()
+
+        # poll the results once to get the finished page
+        self.pollResults()
+
 
     def get_job_key(self):
         '''(primerBlastResults) -> NoneType
@@ -115,6 +120,10 @@ class primerBlastResults:
         if not hasattr(self, "job_key"):
             print('''%s: Couldn't parse job_key''' % self.RefSeq)
             print(self.html)
+            print('%s: Waiting 60 seconds and '
+                  're-submitting the BLAST request' % self.RefSeq)
+            time.sleep(60)
+            self.submit_blast_request()
 
     def printFile(self, subdir):
         '''(primerBlastResults) -> NoneType
@@ -275,20 +284,12 @@ class primerBlastResults:
                         attrs={'name': 'USER_SEQLOC'})]
                 print("%s: Found similar sequences: %s" % 
                       (self.RefSeq, self.user_seqloc))
-                post_parameters = self.blast_parameters.copy()
-                post_parameters['TRY_USER_GUIDE'] = 'yes'
-                post_parameters['USER_SEQLOC'] = self.user_seqloc
+                self.blast_parameters['TRY_USER_GUIDE'] = 'yes'
+                self.blast_parameters['USER_SEQLOC'] = self.user_seqloc
 
                 # this is effectively a new BLAST search so expect a new
                 # job_key
-                self.blast_parameters = post_parameters
-                blast_result = requests.get(
-                    self.blastUrl,
-                    params=self.blast_parameters)
-                self.html = BeautifulSoup(blast_result.content, 'lxml')
-                self.url = blast_result.url
-                self.get_job_key()
-                self.pollResults()
+                self.submit_blast_request()
 
 
 #############

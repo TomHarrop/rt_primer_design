@@ -282,3 +282,5 @@ long_blast_results = joblib.Parallel(n_jobs=10, verbose=100)(
         verbose=True) for x in long_gene_list)
 
 # process blast results into CSV etc.
+
+# some genes eh? NM_001059848
