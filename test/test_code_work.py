@@ -283,23 +283,3 @@ long_blast_results = joblib.Parallel(n_jobs=10, verbose=100)(
         verbose=True) for x in long_gene_list)
 
 # process blast results into CSV etc.
-
-
-#to troubleshoot: AK287830
-test_params = strict_parameters.copy()
-test_params.pop('SPAN_INTRON')
-ts_gene = functions.primerBlastResults(
-    RefSeq='AK287830',
-    status='strict',
-    blast_parameters=test_params)
-ts_blast_test = run_primer_blast(
-    refseq_id='AK287830',
-    blast_parameters=test_params,
-    status='strict',
-    wait_seconds=10,
-    verbose=True)
-ts_gene_test = run_iterative_primer_blast(
-    test_refseq='AK287830',
-    strict_parameters=strict_parameters,
-    wait_seconds=10,
-    verbose=True)

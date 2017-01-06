@@ -99,17 +99,18 @@ class primerBlastResults:
         # get the job_key. first choice is the proper "job_key" tag
         if self.html(attrs={'name': 'job_key'}):
             self.job_key = self.html.find(attrs={'name': 'job_key'})['value']
+            print('%s: Found job_key %s in attrs' %
+                  (self.RefSeq, self.job_key))
         # otherwise, try to parse the 'Job id' from `breadcrumb` with regex :(
         elif self.html.find(id='breadcrumb'):
-            bc_strings = [
-                x for x in self.html.find(id='breadcrumb').stripped_strings]
-            bc_search = re.compile(r'Job id\=(\S+)$')
-            self.job_key = [
-                bc_search.search(x).groups()[0] for x in bc_strings
-                if bc_search.search(x)][0]
-            # for bc_string in bc_strings:
-            #     if bc_search.search(bc_string):
-            #         self.job_key = bc_search.search(bc_string).groups()[0]
+            bc_text = self.html.find(id='breadcrumb').text
+            bc_search = re.compile(r'Job id\=(\S+).*')
+            self.job_key = bc_search.search(bc_text).group(1)
+            print('%s: Parsed job_key %s from breadcrumb' %
+                  (self.RefSeq, self.job_key))
+        else:
+            print('''%s: Couldn't parse job_key''' % self.RefSeq)
+            print(self.html)
 
     def printFile(self, subdir):
         '''(primerBlastResults) -> NoneType
