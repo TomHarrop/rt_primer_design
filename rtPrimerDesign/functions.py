@@ -189,12 +189,19 @@ class primerBlastResults:
         found for the criteria given, and the criteria should be relaxed)
 
         '''
+        warning_list = []
         if self.html.find(class_='warning'):
-            self.noPrimersFound = ('loosen the selection criteria' in
-                                   self.html.find(class_='warning').text)
-        elif self.html.find(class_='info'):
-            self.noPrimersFound = ('No primers were found' in
-                                   self.html.find(class_='info').text)
+            warning_list.append(
+                ('loosen the selection criteria' in
+                 self.html.find(class_='warning').text))
+
+        if self.html.find(class_='info'):
+            warning_list.append(
+                ('No primers were found' in
+                 self.html.find(class_='info').text))
+
+        if any(x for x in warning_list):
+            self.noPrimersFound = True
         else:
             self.noPrimersFound = False
 

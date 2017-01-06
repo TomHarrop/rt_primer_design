@@ -9,6 +9,7 @@ import rtPrimerDesign.functions as functions
 import time
 import joblib
 import tompytools
+import sys
 
 
 #############
@@ -24,6 +25,11 @@ def run_primer_blast(
         verbose=False):
     if verbose:
         tompytools.generate_message('Running BLAST for %s' % refseq_id)
+        print(
+            'RefSeq=%s\t\t\t'
+            'blast_parameters=%s\t\t\t'
+            'status=%s' %
+            (refseq_id, blast_parameters, status))
     # run a BLAST search
     blast_result = functions.primerBlastResults(
         RefSeq=refseq_id,
@@ -250,16 +256,50 @@ test_iterative_blast_result_2 = run_iterative_primer_blast(
     verbose=True)
 
 
+# solve recursion error?
+sys.setrecursionlimit(10000)
+
 # multiple genes (joblib)
 refseq_list = ['NM_001062476', 'XM_015768655']
 jobs_to_run = min(len(refseq_list), max_jobs)
-blast_results = joblib.Parallel(n_jobs=2, verbose=5)(
+blast_results = joblib.Parallel(n_jobs=jobs_to_run, verbose=100)(
     joblib.delayed(run_iterative_primer_blast)(
         test_refseq=x,
         strict_parameters=strict_parameters,
-        wait_seconds=10,                    # FIXME! wait 60 seconds
+        wait_seconds=wait_seconds,
         verbose=True) for x in refseq_list)
 
 
+long_gene_list = [
+    'AK287830', 'CT837746', 'NM_001066571', 'NM_001061339',
+    'NM_001048798', 'NM_001050743', 'CT836522', 'NM_001060130', 'AK243143',
+    'NM_001060972', 'NM_001066641', 'NM_001067072', 'NM_001059848']
+
+long_blast_results = joblib.Parallel(n_jobs=10, verbose=100)(
+    joblib.delayed(run_iterative_primer_blast)(
+        test_refseq=x,
+        strict_parameters=strict_parameters,
+        wait_seconds=wait_seconds,
+        verbose=True) for x in long_gene_list)
+
+# process blast results into CSV etc.
 
 
+#to troubleshoot: AK287830
+test_params = strict_parameters.copy()
+test_params.pop('SPAN_INTRON')
+ts_gene = functions.primerBlastResults(
+    RefSeq='AK287830',
+    status='strict',
+    blast_parameters=test_params)
+ts_blast_test = run_primer_blast(
+    refseq_id='AK287830',
+    blast_parameters=test_params,
+    status='strict',
+    wait_seconds=10,
+    verbose=True)
+ts_gene_test = run_iterative_primer_blast(
+    test_refseq='AK287830',
+    strict_parameters=strict_parameters,
+    wait_seconds=10,
+    verbose=True)
