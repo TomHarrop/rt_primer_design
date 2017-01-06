@@ -282,5 +282,11 @@ long_blast_results = joblib.Parallel(n_jobs=10, verbose=100)(
         verbose=True) for x in long_gene_list)
 
 # process blast results into CSV etc.
+with open('test/test_summary.csv', 'w') as file:
+    file.write('RefSeq,status,F,TM_F,R,TM_R,'
+               'ProductSize,IntronSize\n')
+    for result in long_blast_results:
+        file.write(result.csvLine() + '\n')
+
 
 # some genes eh? NM_001059848
