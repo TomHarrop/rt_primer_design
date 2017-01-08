@@ -468,7 +468,7 @@ for i in range(len(failedStrings)):
                     '''<a href="http://www.ncbi.nlm.nih.gov/tools/'''
                     '''primer-blast/index.cgi?''' +
                     urllib.parse.urlencode(pasteParams) + '''">''' +
-                    failedSets[i][key].LOC + '''</a><br />\n''')
+                    failedSets[i][key].RefSeq + '''</a><br />\n''')
             file.write('\n</p>\n</body>\n</html>')
 
 print('\nDone.\n')

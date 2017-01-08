@@ -10,6 +10,7 @@ import time
 import joblib
 import tompytools
 import sys
+import os
 
 
 #############
@@ -287,6 +288,14 @@ with open('test/test_summary.csv', 'w') as file:
                'ProductSize,IntronSize\n')
     for result in long_blast_results:
         file.write(result.csvLine() + '\n')
+
+# print html files
+html_dir = 'test/html_files'
+if not os.path.isdir(html_dir):
+    os.mkdir(path=html_dir)
+
+for primer in long_blast_results:
+    primer.printFile(subdir=html_dir)
 
 
 # some genes eh? NM_001059848

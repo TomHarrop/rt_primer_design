@@ -128,10 +128,10 @@ class primerBlastResults:
     def printFile(self, subdir):
         '''(primerBlastResults) -> NoneType
 
-        Output html to file named LOC.html
+        Output html to file named RefSeq.html
 
         '''
-        with open(subdir + "/" + self.LOC + ".html", 'w') as file:
+        with open(subdir + "/" + self.RefSeq + ".html", 'w') as file:
             print(self.html, file=file)
 
     def pollResults(self):
