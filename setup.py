@@ -5,7 +5,7 @@ except ImportError:
     from distutils.core import setup
 
 setup(
-    name='rtPrimerDesign',
+    name='rt_primer_design',
     version='0.0.1',
     description='Primer Design for real time PCR',
     url='https://github.com/tomharrop/rtPrimerDesign',
