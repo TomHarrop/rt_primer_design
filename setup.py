@@ -6,7 +6,7 @@ except ImportError:
 
 setup(
     name='rt_primer_design',
-    version='0.0.1',
+    version='0.0.2',
     description='Primer Design for real time PCR',
     url='https://github.com/tomharrop/rtPrimerDesign',
     author='Tom Harrop',
@@ -17,7 +17,6 @@ setup(
         'beautifulsoup4>=4.5.1',
         'joblib>=0.9.4',
         'lxml>=3.7.1',
-        'progressbar2>=3.12.0',
         'requests>=2.12.4',
         'tompytools>=0.0.3'],
     zip_safe=False
