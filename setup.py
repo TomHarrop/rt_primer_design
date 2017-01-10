@@ -6,7 +6,7 @@ except ImportError:
 
 setup(
     name='rt_primer_design',
-    version='0.0.2',
+    version='0.0.3',
     description='Primer Design for real time PCR',
     url='https://github.com/tomharrop/rtPrimerDesign',
     author='Tom Harrop',

@@ -231,6 +231,9 @@ class PrimerBlastResult:
         Returns:
             A str of text in csv format.
         """
+        if not hasattr(self, 'F'):
+            return '{0},{1},,,,,,'.format(self.ref_seq, self.status)
+
         return '{0},{1},{2},{3},{4},{5},{6},{7}'.format(
             self.ref_seq,       # 0
             self.status,        # 1
@@ -433,7 +436,7 @@ def iterate_primer_blast(
     # re-run with lower GC requirements
     if (iterative_blast_result.no_primers_found or
             iterative_blast_result.off_targets):
-        tompytools.generate_message('%s: Relaxing GC clamp' % ref_seq)
+        tompytools.generate_message('%s: Relaxing GC content' % ref_seq)
         iterative_blast_result.status = 'GC_content'
         iterative_blast_result.blast_parameters['PRIMER_MIN_GC'] = '35'
         iterative_blast_result.blast_parameters['PRIMER_MAX_GC'] = '65'
